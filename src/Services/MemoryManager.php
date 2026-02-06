@@ -1,0 +1,103 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Eznix86\AI\Memory\Services;
+
+use Eznix86\AI\Memory\Models\Memory;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+class MemoryManager
+{
+    /**
+     * Store a memory with automatic embedding generation.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function store(string $content, array $context = []): \Eznix86\AI\Memory\Models\Memory
+    {
+        $embedding = Str::of($content)->toEmbeddings();
+
+        return Memory::create(array_merge($context, [
+            'content' => $content,
+            'embedding' => $embedding,
+        ]));
+    }
+
+    /**
+     * Recall memories using vector similarity and reranking.
+     *
+     * @param  array<string, mixed>  $context
+     * @return \Illuminate\Support\Collection<int, \Eznix86\AI\Memory\Models\Memory>
+     */
+    public function recall(string $query, array $context = [], ?int $limit = null): Collection
+    {
+        $limit ??= config('memory.recall_limit', 10);
+        $threshold = config('memory.similarity_threshold', 0.5);
+        $oversampleFactor = config('memory.recall_oversample_factor', 2);
+
+        $queryEmbedding = Str::of($query)->toEmbeddings();
+
+        $memories = $this->applyContext(Memory::query(), $context)
+            ->whereVectorSimilarTo('embedding', $queryEmbedding, $threshold)
+            ->limit($limit * $oversampleFactor)
+            ->get();
+
+        if ($memories->isEmpty()) {
+            return collect();
+        }
+
+        return $memories
+            ->rerank('content', $query)
+            ->take($limit);
+    }
+
+    /**
+     * Get all memories with optional context filtering.
+     *
+     * @param  array<string, mixed>  $context
+     * @return \Illuminate\Database\Eloquent\Collection<int, \Eznix86\AI\Memory\Models\Memory>
+     */
+    public function all(array $context = [], int $limit = 100): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->applyContext(Memory::query(), $context)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Delete a specific memory.
+     */
+    public function forget(int $memoryId): bool
+    {
+        return Memory::find($memoryId)?->delete() ?? false;
+    }
+
+    /**
+     * Delete all memories matching the given context.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function forgetAll(array $context = []): int
+    {
+        return (int) $this->applyContext(Memory::query(), $context)->delete();
+    }
+
+    /**
+     * Apply context filters to a query builder.
+     *
+     * @param  mixed  $query
+     * @param  array<string, mixed>  $context
+     */
+    protected function applyContext($query, array $context): mixed
+    {
+        foreach ($context as $field => $value) {
+            $query->where($field, $value);
+        }
+
+        return $query;
+    }
+}

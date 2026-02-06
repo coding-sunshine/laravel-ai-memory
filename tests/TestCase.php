@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests;
+
+use Eznix86\AI\Memory\Facades\AgentMemory;
+use Eznix86\AI\Memory\MemoryServiceProvider;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Ai\AiServiceProvider;
+use Orchestra\Testbench\TestCase as BaseTestCase;
+use Testcontainers\Container\GenericContainer;
+use Testcontainers\Container\StartedGenericContainer;
+use Testcontainers\Wait\WaitForExec;
+
+abstract class TestCase extends BaseTestCase
+{
+    use RefreshDatabase;
+
+    protected static ?StartedGenericContainer $postgresContainer = null;
+
+    #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+
+        $container = new GenericContainer('pgvector/pgvector:pg18-trixie');
+        $container
+            ->withExposedPorts(5432)
+            ->withEnvironment([
+                'POSTGRES_USER' => 'test_user',
+                'POSTGRES_PASSWORD' => 'test_password',
+                'POSTGRES_DB' => 'memory_test',
+            ])
+            ->withWait(new WaitForExec(['pg_isready', '-h', '127.0.0.1', '-U', 'test_user']));
+
+        static::$postgresContainer = $container->start();
+    }
+
+    #[\Override]
+    public static function tearDownAfterClass(): void
+    {
+        static::$postgresContainer?->stop();
+
+        parent::tearDownAfterClass();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+    }
+
+    protected function getPackageProviders($app): array
+    {
+        return [
+            AiServiceProvider::class,
+            MemoryServiceProvider::class,
+        ];
+    }
+
+    protected function getPackageAliases($app): array
+    {
+        return [
+            'Memory' => AgentMemory::class,
+        ];
+    }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'pgsql',
+            'host' => static::$postgresContainer->getHost(),
+            'port' => static::$postgresContainer->getMappedPort(5432),
+            'database' => 'memory_test',
+            'username' => 'test_user',
+            'password' => 'test_password',
+            'charset' => 'utf8',
+            'prefix' => '',
+            'schema' => 'public',
+        ]);
+    }
+}
