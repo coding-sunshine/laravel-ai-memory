@@ -12,7 +12,7 @@ Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai). It keeps you
 - A vector compatible database, preferably PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) extension
 
 ## Use cases
-* **Personalization**: remember user preferences (tone, language, UI choices).
+* **Personalization**: remember user preferences (tone, language, choices, and more...).
 * **Continuity**: retain prior issues, steps tried, and outcomes.
 * **Workflows**: resume tasks with stored constraints, decisions, and last-known state.
 * **Context**: keep shared conventions, requirements, and decisions for consistent agent behavior.
