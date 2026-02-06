@@ -3,7 +3,6 @@
     "description": "AI memory for Laravel AI SDK with semantic search and reranking",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.0",
     "keywords": ["laravel", "ai", "memory", "semantic-search", "vector-embeddings"],
     "authors": [
         {
