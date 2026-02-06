@@ -2,7 +2,7 @@
 
 ![Banner](./art/banner.png)
 
-Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai).
+Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai). It keeps your agent in context.
 
 ## Requirements
 
@@ -10,6 +10,15 @@ Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai).
 - Laravel 12+
 - laravel AI SDK
 - A vector compatible database, preferably PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) extension
+
+## Use cases
+* **Personalization**: remember user preferences (tone, language, UI choices).
+* **Continuity**: retain prior issues, steps tried, and outcomes.
+* **Workflows**: resume tasks with stored constraints, decisions, and last-known state.
+* **Context**: keep shared conventions, requirements, and decisions for consistent agent behavior.
+* **Multi-agent/tool handoff**: persist facts so different agents/tools can coordinate without repeating context.
+* **Scoped memory**: store only approved, minimal facts instead of full conversation history.
+
 
 ## Installation
 
