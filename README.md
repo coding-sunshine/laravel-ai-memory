@@ -1,5 +1,7 @@
 # Laravel AI Memory
 
+![Banner](./art/banner.png)
+
 Agentic memory for [Laravel AI SDK](https://github.com/laravel/ai).
 
 ## Requirements
