@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace Eznix86\AI\Memory\Facades;
 
-use Illuminate\Support\Collection;
 use Eznix86\AI\Memory\Models\Memory;
 use Eznix86\AI\Memory\Services\MemoryManager;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Facade;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Laravel\Ai\Reranking;
 
 /**
- * @method static Memory store(string $content, array<string, mixed> $context = [])
- * @method static Collection<string, Memory> recall(string $query, array<string, mixed> $context = [], ?int $limit = null)
- * @method static Collection<string, Memory> all(array<string, mixed> $context = [], int $limit = 100)
+ * @method static Memory store(string $content, array<string, mixed> $context = [], ?Carbon $ttl = null, ?string $type = null)
+ * @method static Collection<int, Memory> storeMany(array<int, string|array{content: string, type?: string, ttl?: Carbon}> $items, array<string, mixed> $context = [])
+ * @method static Collection<int, Memory> recall(string $query, array<string, mixed> $context = [], ?int $limit = null)
+ * @method static \Illuminate\Database\Eloquent\Collection<int, Memory> all(array<string, mixed> $context = [], int $limit = 100)
  * @method static bool forget(int $memoryId)
  * @method static int forgetAll(array<string, mixed> $context = [])
+ * @method static int prune(array<string, mixed> $context = [])
  *
- * @see \Eznix86\AI\Memory\Services\MemoryManager
+ * @see MemoryManager
  */
 class AgentMemory extends Facade
 {

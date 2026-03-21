@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Eznix86\AI\Memory\Tools;
 
-use Eznix86\AI\Memory\Services\MemoryManager;
+use Eznix86\AI\Memory\Models\Memory;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
@@ -13,7 +14,7 @@ use Stringable;
 /**
  * @property array<string, mixed> $context
  */
-class StoreMemory implements Tool
+class UpdateMemory implements Tool
 {
     /**
      * @param  array<string, mixed>  $context
@@ -39,7 +40,7 @@ class StoreMemory implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'Store a new memory from the conversation. Use this to save important user preferences, facts, or decisions for future recall.';
+        return 'Update an existing memory by ID with new content. Use this to correct or refine previously stored information.';
     }
 
     /**
@@ -47,15 +48,21 @@ class StoreMemory implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
-        $memoryManager = app(MemoryManager::class);
+        /** @var Memory|null $memory */
+        $memory = Memory::find($request['memory_id']);
 
-        $memory = $memoryManager->store(
-            $request['content'],
-            $this->context,
-            type: $request['type'] ?? null,
-        );
+        if (! $memory) {
+            return 'Memory not found.';
+        }
 
-        return "Memory stored successfully (ID: {$memory->id}).";
+        $embedding = Str::of($request['content'])->toEmbeddings();
+
+        $memory->update([
+            'content' => $request['content'],
+            'embedding' => $embedding,
+        ]);
+
+        return "Memory updated successfully (ID: {$memory->id}).";
     }
 
     /**
@@ -66,11 +73,12 @@ class StoreMemory implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'content' => $schema->string()
-                ->description('The content to store as a memory. Should be a concise, meaningful statement.')
+            'memory_id' => $schema->integer()
+                ->description('The ID of the memory to update.')
                 ->required(),
-            'type' => $schema->string()
-                ->description('Optional category for the memory (e.g., "preference", "fact", "workflow-state").'),
+            'content' => $schema->string()
+                ->description('The new content for the memory.')
+                ->required(),
         ];
     }
 }

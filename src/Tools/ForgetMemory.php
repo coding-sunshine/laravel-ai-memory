@@ -13,7 +13,7 @@ use Stringable;
 /**
  * @property array<string, mixed> $context
  */
-class StoreMemory implements Tool
+class ForgetMemory implements Tool
 {
     /**
      * @param  array<string, mixed>  $context
@@ -39,7 +39,7 @@ class StoreMemory implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'Store a new memory from the conversation. Use this to save important user preferences, facts, or decisions for future recall.';
+        return 'Forget (delete) a specific memory by ID. Use this when information is no longer relevant or was stored incorrectly.';
     }
 
     /**
@@ -49,13 +49,11 @@ class StoreMemory implements Tool
     {
         $memoryManager = app(MemoryManager::class);
 
-        $memory = $memoryManager->store(
-            $request['content'],
-            $this->context,
-            type: $request['type'] ?? null,
-        );
+        $deleted = $memoryManager->forget($request['memory_id']);
 
-        return "Memory stored successfully (ID: {$memory->id}).";
+        return $deleted
+            ? 'Memory forgotten successfully.'
+            : 'Memory not found.';
     }
 
     /**
@@ -66,11 +64,9 @@ class StoreMemory implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'content' => $schema->string()
-                ->description('The content to store as a memory. Should be a concise, meaningful statement.')
+            'memory_id' => $schema->integer()
+                ->description('The ID of the memory to forget.')
                 ->required(),
-            'type' => $schema->string()
-                ->description('Optional category for the memory (e.g., "preference", "fact", "workflow-state").'),
         ];
     }
 }

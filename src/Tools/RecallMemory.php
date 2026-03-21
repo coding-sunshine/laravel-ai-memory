@@ -60,11 +60,17 @@ class RecallMemory implements Tool
     {
         $limit = $this->limit ?? config('memory.recall_limit', 10);
 
+        $context = $this->context;
+
+        if (isset($request['type'])) {
+            $context['type'] = $request['type'];
+        }
+
         $memoryManager = app(MemoryManager::class);
 
         $memories = $memoryManager->recall(
             $request['query'],
-            $this->context,
+            $context,
             $limit,
         );
 
@@ -86,6 +92,8 @@ class RecallMemory implements Tool
             'query' => $schema->string()
                 ->description('The search query to find relevant memories.')
                 ->required(),
+            'type' => $schema->string()
+                ->description('Optional category filter to narrow recall (e.g., "preference", "fact", "workflow-state").'),
         ];
     }
 }

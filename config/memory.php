@@ -82,4 +82,44 @@ return [
 
     'table' => env('MEMORY_TABLE', 'memories'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deduplication Threshold
+    |--------------------------------------------------------------------------
+    |
+    | The cosine similarity threshold (0.0 to 1.0) above which a new memory
+    | is considered a duplicate of an existing one. When a duplicate is
+    | detected, the existing memory is updated instead of creating a new one.
+    | Set to 1.0 to disable deduplication.
+    |
+    */
+
+    'dedup_threshold' => env('MEMORY_DEDUP_THRESHOLD', 0.95),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maximum Memories Per Context
+    |--------------------------------------------------------------------------
+    |
+    | The maximum number of memories allowed per context (e.g., per user).
+    | When this limit is exceeded after a store operation, older memories
+    | are pruned according to the configured pruning strategy.
+    | Set to 0 to disable the limit.
+    |
+    */
+
+    'max_per_context' => env('MEMORY_MAX_PER_CONTEXT', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pruning Strategy
+    |--------------------------------------------------------------------------
+    |
+    | The strategy used when pruning memories to enforce per-context limits.
+    | Supported values: "oldest" (remove oldest first by created_at).
+    |
+    */
+
+    'pruning_strategy' => env('MEMORY_PRUNING_STRATEGY', 'oldest'),
+
 ];

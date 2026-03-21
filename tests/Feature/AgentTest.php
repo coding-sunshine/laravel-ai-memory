@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Eznix86\AI\Memory\Facades\AgentMemory;
 use Eznix86\AI\Memory\Middleware\WithMemory;
+use Eznix86\AI\Memory\Tools\ForgetMemory;
 use Eznix86\AI\Memory\Tools\RecallMemory;
 use Eznix86\AI\Memory\Tools\StoreMemory;
+use Eznix86\AI\Memory\Tools\UpdateMemory;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Tools\Request;
@@ -286,4 +288,146 @@ test('tools respect user isolation', function (): void {
 
     expect($result)->toContain('Bob secret data')
         ->and($result)->not->toContain('Alice secret data');
+});
+
+// ──────────────────────────────────────────────────────────────────
+// UpdateMemory Tool Tests
+// ──────────────────────────────────────────────────────────────────
+
+test('UpdateMemory updates an existing memory', function (): void {
+    AgentMemory::fake();
+
+    $memory = AgentMemory::store('Original content', ['user_id' => 'user-update']);
+
+    $tool = (new UpdateMemory)->context(['user_id' => 'user-update']);
+    $result = $tool->handle(new Request([
+        'memory_id' => $memory->id,
+        'content' => 'Updated content',
+    ]));
+
+    expect($result)->toContain('Memory updated successfully')
+        ->and($result)->toContain("ID: {$memory->id}");
+
+    $this->assertDatabaseHas('memories', [
+        'id' => $memory->id,
+        'content' => 'Updated content',
+    ]);
+});
+
+test('UpdateMemory returns not found for invalid ID', function (): void {
+    $tool = new UpdateMemory;
+    $result = $tool->handle(new Request([
+        'memory_id' => 99999,
+        'content' => 'Something',
+    ]));
+
+    expect($result)->toBe('Memory not found.');
+});
+
+test('UpdateMemory has correct schema', function (): void {
+    $tool = new UpdateMemory;
+    $schema = $tool->schema(new JsonSchemaTypeFactory);
+
+    expect($schema)->toHaveKey('memory_id')
+        ->and($schema)->toHaveKey('content');
+});
+
+test('UpdateMemory has a description', function (): void {
+    $tool = new UpdateMemory;
+
+    expect((string) $tool->description())->not->toBeEmpty();
+});
+
+// ──────────────────────────────────────────────────────────────────
+// ForgetMemory Tool Tests
+// ──────────────────────────────────────────────────────────────────
+
+test('ForgetMemory deletes an existing memory', function (): void {
+    AgentMemory::fake();
+
+    $memory = AgentMemory::store('To be forgotten', ['user_id' => 'user-forget']);
+
+    $tool = (new ForgetMemory)->context(['user_id' => 'user-forget']);
+    $result = $tool->handle(new Request(['memory_id' => $memory->id]));
+
+    expect($result)->toBe('Memory forgotten successfully.');
+    $this->assertDatabaseMissing('memories', ['id' => $memory->id]);
+});
+
+test('ForgetMemory returns not found for invalid ID', function (): void {
+    $tool = new ForgetMemory;
+    $result = $tool->handle(new Request(['memory_id' => 99999]));
+
+    expect($result)->toBe('Memory not found.');
+});
+
+test('ForgetMemory has correct schema', function (): void {
+    $tool = new ForgetMemory;
+    $schema = $tool->schema(new JsonSchemaTypeFactory);
+
+    expect($schema)->toHaveKey('memory_id');
+});
+
+test('ForgetMemory has a description', function (): void {
+    $tool = new ForgetMemory;
+
+    expect((string) $tool->description())->not->toBeEmpty();
+});
+
+// ──────────────────────────────────────────────────────────────────
+// StoreMemory with Type Tests
+// ──────────────────────────────────────────────────────────────────
+
+test('StoreMemory stores memory with type', function (): void {
+    AgentMemory::fake();
+
+    $tool = (new StoreMemory)->context(['user_id' => 'user-type']);
+    $result = $tool->handle(new Request([
+        'content' => 'Prefers dark mode',
+        'type' => 'preference',
+    ]));
+
+    expect($result)->toContain('Memory stored successfully');
+
+    $this->assertDatabaseHas('memories', [
+        'user_id' => 'user-type',
+        'content' => 'Prefers dark mode',
+        'type' => 'preference',
+    ]);
+});
+
+test('StoreMemory schema includes type field', function (): void {
+    $tool = new StoreMemory;
+    $schema = $tool->schema(new JsonSchemaTypeFactory);
+
+    expect($schema)->toHaveKey('content')
+        ->and($schema)->toHaveKey('type');
+});
+
+// ──────────────────────────────────────────────────────────────────
+// RecallMemory with Type Tests
+// ──────────────────────────────────────────────────────────────────
+
+test('RecallMemory filters by type', function (): void {
+    AgentMemory::fake();
+
+    AgentMemory::store('Prefers dark mode', ['user_id' => 'user-type'], type: 'preference');
+    AgentMemory::store('The sky is blue', ['user_id' => 'user-type'], type: 'fact');
+
+    $tool = (new RecallMemory)->context(['user_id' => 'user-type']);
+    $result = $tool->handle(new Request([
+        'query' => 'mode',
+        'type' => 'preference',
+    ]));
+
+    expect($result)->toContain('Prefers dark mode')
+        ->and($result)->not->toContain('The sky is blue');
+});
+
+test('RecallMemory schema includes type field', function (): void {
+    $tool = new RecallMemory;
+    $schema = $tool->schema(new JsonSchemaTypeFactory);
+
+    expect($schema)->toHaveKey('query')
+        ->and($schema)->toHaveKey('type');
 });
